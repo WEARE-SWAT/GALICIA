@@ -78,6 +78,58 @@ def table_to_html(table):
     return table_html
 
 
+def extract_dni(text):
+    dni_pattern = r"D\.N\.I\.\s*(\d{8})"
+    dni_match = re.search(dni_pattern, text)
+    if dni_match:
+        dni_value = dni_match.group(1)  # Se almacena el valor del DNI en una variable
+        return dni_value
+    else:
+        dni_pattern = r"PRUER\s*(\d{8})"  # Hay algunos dni que estan despues de esas siglas, es un tema del form recognizer
+        dni_match = re.search(dni_pattern, text)
+        if dni_match:
+            dni_value = dni_match.group(
+                1
+            )  # Se almacena el valor del DNI en una variable
+            return dni_value
+        else:
+            return None
+
+
+def extract_cuit(text):
+    cuit_pattern = r"C\.U\.I\.T\.\s*(\d{2}-\d{8}-\d)"
+    cuit_match = re.search(cuit_pattern, text)
+    if cuit_match:
+        cuit_value = cuit_match.group(1)  # Almacena el valor del CUIT en una variable
+        return cuit_value
+    else:
+        cuit_pattern = r"C\.U\.I\.T\. PRUER\s*(\d{2}-\d{8}-\d)"
+        cuit_match = re.search(cuit_pattern, text)
+        if cuit_match:
+            cuit_value = cuit_match.group(1)
+            return cuit_value
+        else:
+            return None
+
+
+def extract_npoliza(text):
+    npoliza_pattern = r"(?:PÓLIZA(?:\sN°)?\s)?(\d{3}-\d{8}-\d{2})"
+    npoliza_match = re.search(npoliza_pattern, text, re.IGNORECASE)
+    if npoliza_match:
+        npoliza_value = npoliza_match.group(1)
+        return npoliza_value
+    else:
+        npoliza_pattern = r"PÓLIZA\sN°\s(\d{3}-\d{8}-\d{2})"
+        npoliza_match = re.search(npoliza_pattern, text, re.IGNORECASE)
+        if npoliza_match:
+            npoliza_value = npoliza_match.group(
+                1
+            )  # Almacena el valor de npoliza en una variable
+            return npoliza_value
+        else:
+            return None
+
+
 def get_document_text(filename):
     offset = 0
     page_map = []
@@ -86,7 +138,7 @@ def get_document_text(filename):
     form_recognizer_client = DocumentAnalysisClient(
         endpoint=f"https://{args.formrecognizerservice}.cognitiveservices.azure.com/",
         credential=formrecognizer_creds,
-        headers={"x-ms-useragent": "azure-search-chat-demo/1.0.0"},
+        headers={"x-ms-useragent": "azure-search-resultcontentchat-demo/1.0.0"},
     )
 
     with open(filename, "rb") as f:
@@ -144,6 +196,15 @@ def create_search_index():
                 SimpleField(name="id", type="Edm.String", key=True),
                 SearchableField(
                     name="content", type="Edm.String", analyzer_name="en.microsoft"
+                ),
+                SearchableField(
+                    name="dni", type="Edm.String", analyzer_name="en.microsoft"
+                ),
+                SearchableField(
+                    name="cuit", type="Edm.String", analyzer_name="en.microsoft"
+                ),
+                SearchableField(
+                    name="npoliza", type="Edm.String", analyzer_name="en.microsoft"
                 ),
                 SimpleField(
                     name="category", type="Edm.String", filterable=True, facetable=True
@@ -217,13 +278,16 @@ def upload_blobs(filename):
 
 
 def create_sections(filename, page_map):
-    for i, (section, pagenum) in enumerate(split_text(page_map)):
+    for i, (section, pagenum, dni, cuit, npoliza) in enumerate(split_text(page_map)):
         yield {
             "id": re.sub("[^0-9a-zA-Z_-]", "_", f"{filename}-{i}"),
             "content": section,
             "category": args.category,
             "sourcepage": blob_name_from_file_page(filename, pagenum),
             "sourcefile": filename,
+            "dni": dni,
+            "cuit": cuit,
+            "npoliza": npoliza,
         }
 
 
@@ -236,14 +300,34 @@ def index_sections(filename, sections):
     )
     i = 0
     batch = []
+    dni_value = None
+    cuit_value = None
+    npoliza_value = None
     for s in sections:
         batch.append(s)
         i += 1
+        if s["dni"]:
+            dni_value = s["dni"]
+        if s["cuit"]:
+            cuit_value = s["cuit"]
+        if s["npoliza"]:
+            npoliza_value = s[
+                "npoliza"
+            ]  # Asigna los valores si están presente en la sección
         if i % 1000 == 0:
             results = search_client.upload_documents(documents=batch)
             succeeded = sum([1 for r in results if r.succeeded])
             print(f"\tIndexed {len(results)} sections, {succeeded} succeeded")
             batch = []
+
+    # Asigna el valor del DNI, del CUIT y de npoliza a todas las secciones del mismo archivo
+    for s in batch:
+        if dni_value:
+            s["dni"] = dni_value
+        if cuit_value:
+            s["cuit"] = cuit_value
+        if npoliza_value:
+            s["npoliza"] = npoliza_value
 
     if len(batch) > 0:
         results = search_client.upload_documents(documents=batch)
@@ -304,7 +388,13 @@ def split_text(page_map):
             start += 1
 
         section_text = all_text[start:end]
-        yield (section_text, find_page(start))
+        yield (
+            section_text,
+            find_page(start),
+            extract_dni(section_text),
+            extract_cuit(section_text),
+            extract_npoliza(section_text),
+        )
 
         last_table_start = section_text.rfind("<table")
         if (
@@ -327,8 +417,11 @@ def split_text(page_map):
 
 create_search_index()
 for filename in glob.glob(DATA_PATH):
-    print("Processing: {}".format(filename))
+    print("Processing:", filename)
     upload_blobs(filename)
     page_map = get_document_text(filename)
+    dnis = extract_dni
+    cuits = extract_cuit
+    npolizas = extract_npoliza
     sections = create_sections(os.path.basename(filename), page_map)
     index_sections(os.path.basename(filename), sections)
