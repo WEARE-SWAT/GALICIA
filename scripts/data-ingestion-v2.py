@@ -40,7 +40,7 @@ args = AzureCredentials(
 print(args.searchservice)
 print(args.storageaccount)
 print(args.formrecognizerservice)
-DATA_PATH = "C:/Users/agustmio/OneDrive - NTT DATA EMEAL/Poc/POC galicia deploy/azure-search-openai-demo - copia/data/*"
+DATA_PATH = "C:/Users/agustmio/Desktop/GALICIA/data/*"
 
 FORM_KEY = os.getenv("AZURE_FORMRECOGNIZER_KEY")
 SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
@@ -278,17 +278,46 @@ def upload_blobs(filename):
 
 
 def create_sections(filename, page_map):
+    dni_value = None
+    cuit_value = None
+    npoliza_value = None
+    sections = []
+
     for i, (section, pagenum, dni, cuit, npoliza) in enumerate(split_text(page_map)):
-        yield {
-            "id": re.sub("[^0-9a-zA-Z_-]", "_", f"{filename}-{i}"),
-            "content": section,
-            "category": args.category,
-            "sourcepage": blob_name_from_file_page(filename, pagenum),
-            "sourcefile": filename,
-            "dni": dni,
-            "cuit": cuit,
-            "npoliza": npoliza,
-        }
+        # Almacenar los valores de DNI, CUIT y número de póliza para concatenación
+        if dni:
+            dni_value = dni
+        if cuit:
+            cuit_value = cuit
+        if npoliza:
+            npoliza_value = npoliza
+
+        # Concatenar los valores de DNI, CUIT y número de póliza con la sección de contenido
+        if dni_value or cuit_value or npoliza_value:
+            concatenated_section = section
+            if dni_value:
+                concatenated_section = f"DNI: {dni_value}\n{concatenated_section}"
+            if cuit_value:
+                concatenated_section = f"CUIT: {cuit_value}\n{concatenated_section}"
+            if npoliza_value:
+                concatenated_section = (
+                    f"NPoliza: {npoliza_value}\n{concatenated_section}"
+                )
+
+            sections.append(
+                {
+                    "id": re.sub("[^0-9a-zA-Z_-]", "_", f"{filename}-{i}"),
+                    "content": concatenated_section,
+                    "category": args.category,
+                    "sourcepage": blob_name_from_file_page(filename, pagenum),
+                    "sourcefile": filename,
+                    "dni": dni,
+                    "cuit": cuit,
+                    "npoliza": npoliza,
+                }
+            )
+
+    return sections
 
 
 def index_sections(filename, sections):
