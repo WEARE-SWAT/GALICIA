@@ -296,12 +296,12 @@ def create_sections(filename, page_map):
         if dni_value or cuit_value or npoliza_value:
             concatenated_section = section
             if dni_value:
-                concatenated_section = f"DNI: {dni_value}\n{concatenated_section}"
+                concatenated_section = f"/DNI: {dni_value}/ {concatenated_section}"
             if cuit_value:
-                concatenated_section = f"CUIT: {cuit_value}\n{concatenated_section}"
+                concatenated_section = f"/CUIT: {cuit_value}/ {concatenated_section}"
             if npoliza_value:
                 concatenated_section = (
-                    f"NPoliza: {npoliza_value}\n{concatenated_section}"
+                    f"/Npoliza: {npoliza_value}/ {concatenated_section}"
                 )
 
             sections.append(
