@@ -37,14 +37,14 @@
 }
 
 .oneshotQuestionInput {
-    max-width: 800px;
+    max-width: 1024px;
     width: 100%;
     padding-left: 10px;
     padding-right: 10px;
 }
 
 .oneshotAnswerContainer {
-    max-width: 800px;
+    max-width: 1024px;
     width: 100%;
     padding-left: 10px;
     padding-right: 10px;
@@ -63,4 +63,26 @@
     align-self: flex-end;
     margin-right: 20px;
     margin-top: 20px;
+}
+
+.askEmptyState {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    max-height: 1024px;
+    padding-top: 60px;
+}
+
+.askEmptyStateTitle {
+    font-size: 3rem;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 50px;
+}
+
+.askEmptyStateSubtitle {
+    font-weight: 600;
+    margin-bottom: 10px;
 }

@@ -74,7 +74,7 @@
 }
 
 .headerNavLeftMargin {
-    margin-left: 10px;
+    margin-left: 20px;
 }
 
 .headerRightText {
@@ -92,4 +92,12 @@
 
 .githubLogo {
     height: 20px;
+}
+.ChatContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: bold;
+    list-style: none;
+    margin-left: 62px;
 }

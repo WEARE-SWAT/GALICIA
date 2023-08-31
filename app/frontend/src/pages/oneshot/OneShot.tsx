@@ -133,10 +133,13 @@ const OneShot = () => {
         <div className={styles.oneshotContainer}>
             <div className={styles.oneshotTopSection}>
                 <SettingsButton className={styles.settingsButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
-                <h1 className={styles.oneshotTitle}>Ask your data</h1>
+
+                <img src="/Logo_chat.png" width={100} />
+                <h2 className={styles.askEmptyStateTitle}>Asistente Inteligente de Galicia Seguros</h2>
+
                 <div className={styles.oneshotQuestionInput}>
                     <QuestionInput
-                        placeholder="Ejemplo: Cual es la cobertura de mi poliza?"
+                        placeholder="Ejemplo: ¿Cuál es la cobertura de mi póliza?"
                         disabled={isLoading}
                         onSend={question => makeApiRequest(question)}
                     />
@@ -160,6 +163,7 @@ const OneShot = () => {
                         <AnswerError error={error.toString()} onRetry={() => makeApiRequest(lastQuestionRef.current)} />
                     </div>
                 ) : null}
+
                 {activeAnalysisPanelTab && answer && (
                     <AnalysisPanel
                         className={styles.oneshotAnalysisPanel}
@@ -171,7 +175,9 @@ const OneShot = () => {
                     />
                 )}
             </div>
-
+            <div>
+                <img src="/Logo_NTT.png" width={100} />
+            </div>
             <Panel
                 headerText="Configurar generación de respuestas"
                 isOpen={isConfigPanelOpen}
